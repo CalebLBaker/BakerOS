@@ -1,4 +1,4 @@
-; Kernel entry for BakerOS
+; Kernel entry for Buttaire
 ; Switches the processor from real mode to long mode
 
 

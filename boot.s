@@ -1,4 +1,4 @@
-; Boot sector for BakerOS
+; Boot sector for Buttaire
 ; Load's kernel from disk into memory
 ; and then immediately passes off execution
 ; to kernel
