@@ -4,7 +4,7 @@
 
 # First rule is the one executed when no parameters are fed to the Makefile
 
-bakeros.bin: boot.bin kernel.bin
+buttaire.bin: boot.bin kernel.bin
 	cat $^ > $@
 
 kernel.bin: kernelEntry.o kernel.o
@@ -28,10 +28,10 @@ boot.bin: boot.s
 
 all: run
 
-run: bakeros.bin
+run: buttaire.bin
 	qemu-system-x86_64 -fda $<
 
-debug: bakeros.bin kernel.elf
+debug: buttaire.bin kernel.elf
 	qemu-system-x86_64 -s -fda bakeros.bin &
 	gdb -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
 
