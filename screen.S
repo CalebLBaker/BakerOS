@@ -27,7 +27,7 @@
 #	rsi		The row to print to
 #	rdx		The column to print to
 # Return value
-#	rax		New cursor position
+#	al		Least significant byte of new cursor position
 .globl printAt
 .type printAt, @function
 
@@ -45,7 +45,7 @@ printAt:
 #	rdi		The address of the string to print
 #	rsi		The address in video memory to print the string to
 # Return value
-#	rax		New cursor position
+#	al		Least significant byte of new cursor position
 .globl printTargeted
 .type printTargeted, @function
 
@@ -59,7 +59,7 @@ printTargeted:
 # Parameters
 #	rdi		The address of the string to print
 # Return value
-#	rax		New cursor position
+#	al		Least significant byte of new cursor position
 .globl print
 .type print, @function
 
@@ -330,7 +330,7 @@ printChar:
 
 # Set the position of the cursor
 # Parameters
-#	rdi		New position for the cursor
+#	di		New position for the cursor
 # Return value
 #	al		Least significant byte of new cursor position
 # Clobbers
