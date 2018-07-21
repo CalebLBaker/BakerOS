@@ -1,4 +1,6 @@
+extern char* print(const char *message);
+
 void main() {
-	char *video_memory = (char*) 0xb8000;
-	video_memory[0] = 'X';
+	const char *message = "Successfully entered 64 bit kernel.";
+	print(message);
 }

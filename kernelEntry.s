@@ -1,10 +1,7 @@
-; Kernel entry for Buttaire
-; Calls C code
+# Kernel entry for Buttaire
+# Calls C code
 
-[bits 64]
-[extern main]
+extern main
 
-Realm64:
-	; Call C code
 	call main
 	jmp $
