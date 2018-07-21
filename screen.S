@@ -7,7 +7,9 @@
 #define BLACK_SCREEN 0x0f200f200f200f20
 #define MAX_ROWS 25
 #define MAX_COLS 80
+#define ROW_WIDTH 160
 #define SCREEN_SIZE_DIV_FOUR
+#define NEW_LINE 0xa
 
 .section .text
 
@@ -64,9 +66,12 @@ printEnter:
 	je printEnd
 
 printRecurse:
+	cmpb $NEW_LINE, %cl
+	je newLine
 	movw %cx, (%rax)
-	incq %rdi
 	addq $2, %rax
+printResume:
+	incq %rdi
 	movb (%rdi), %cl
 	cmpb $0, %cl
 	jne printRecurse
@@ -74,11 +79,21 @@ printEnd:
 	subq $VIDEO_ADDRESS, %rax
 	shrq $1, %rax
 	movq %rax, %rdi
-	call setCursorPosition
-	ret
+	jmp setCursorPosition
+
+newLine:
+	subl $VIDEO_ADDRESS, %eax	# Get offset from start of video memory
+	movq %rax, %rsi				# Store offset to register s
+	movw $ROW_WIDTH, %dx		# Load row width (n bytes) to register d
+	divb %dl					# Set ah to the column position
+	shrw $8, %ax				# Set register a to cursor column position
+	subw %ax, %si				# Set register s to start of current line
+	addw %dx, %si				# Set register s to start of next line
+	leaq VIDEO_ADDRESS(%rsi), %rax	# Load address into register a
+	jmp printResume
 
 
-
+	
 # Print a character at a given row and column
 # Parameters
 #	dil		The character to print
@@ -90,12 +105,15 @@ printEnd:
 .type printCharAt, @function
 
 printCharAt:
+	cmpb NEW_LINE, %dil
+	je return
 	movb $WHITE_ON_BLACK, %ch
 	movb %dil, %cl
 	movq $MAX_COLS, %rax
 	mulq %rsi
 	leaq VIDEO_ADDRESS(%rdx,%rax,), %rax
 	movw %cx, (%rax)
+return:
 	ret
 
 
@@ -111,6 +129,8 @@ printCharAt:
 .type printAt, @function
 
 printCharColorAt:
+	cmpb NEW_LINE, %dil
+	je return
 	movq $MAX_COLS, %rax
 	mulq %rsi
 	leaq VIDEO_ADDRESS(%rdx,%rax,), %rax
@@ -128,33 +148,31 @@ printCharColorAt:
 .type printCharColor, @function
 
 printCharColor:
+	cmpb $NEW_LINE, %dil
+	je printNewLine
 	call getCursorPosition
 	leaq VIDEO_ADDRESS(,%rax,2), %rcx
 	movw %di, (%rcx)
 	leaq 1(%rax), %rdi
-	call setCursorPosition
-	ret
+	jmp setCursorPosition
 
 
 
-# Print a character to the current cursor position
-# Parameters
-#	dil		The character to be printed
+# Advance the cursor to the next line
 # Return value
-#	al		The least significant byte of cursor position
-.globl printChar
-.type printChar, @function
+#	al		Least significant byte of new cursor position
+.globl printNewLine
+.type printNewLine, @function
 
-printChar:
-	movb $WHITE_ON_BLACK, %dh
-	movb %dil, %dl
-printCharEnter:
+printNewLine:
 	call getCursorPosition
-	leaq VIDEO_ADDRESS(,%rax,2), %rcx
-	movw %dx, (%rcx)
-	leaq 1(%rax), %rdi
-	call setCursorPosition
-	ret
+	movw %ax, %di
+	movw $MAX_COLS, %cx
+	divb %cl
+	shrw $8, %ax
+	subw %ax, %di
+	addw %cx, %di
+	jmp setCursorPosition
 
 
 
@@ -171,7 +189,7 @@ clearScreen:
 	rep stosq
 	movq $0, %rdi
 	jmp setCursorPosition
-	
+
 
 
 # Get the position of the cursor
@@ -220,7 +238,28 @@ setCursorRowCol:
 	mulq %rdi
 	leaq (%rsi,%rax,), %rdi
 
-# 	jmp setCursorPosition
+ 	jmp setCursorPosition
+
+
+
+# Print a character to the current cursor position
+# Parameters
+#	dil		The character to be printed
+# Return value
+#	al		The least significant byte of cursor position
+.globl printChar
+.type printChar, @function
+
+printChar:
+	cmpb $NEW_LINE, %dil
+	je printNewLine
+	movb $WHITE_ON_BLACK, %dh
+	movb %dil, %dl
+	call getCursorPosition
+	leaq VIDEO_ADDRESS(,%rax,2), %rcx
+	movw %dx, (%rcx)
+	leaq 1(%rax), %rdi
+#	jmp setCursorPosition
 
 
 
