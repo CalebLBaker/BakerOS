@@ -1,4 +1,5 @@
 #define VIDEO_ADDRESS 0xb8000
+#define SECOND_ROW 0xb80a0
 #define CURSOR_HIGH_BYTE 0xe
 #define CURSOR_LOW_BYTE 0xf
 #define SCREEN_CTRL 0x3d4
@@ -8,9 +9,15 @@
 #define MAX_ROWS 25
 #define MAX_COLS 80
 #define ROW_WIDTH 160
-#define SCREEN_SIZE_DIV_FOUR
+#define SCREEN_SIZE_DIV_FOUR 500
 #define NEW_LINE 0xa
+#define VIDEO_END 0xb8fa0
+#define VIDEO_MEMORY_SIZE 3840
+#define CURSOR_END 2000
+#define LAST_ROW 0xb8f00
+#define NUM_COLS_DIV_FOUR 20
 
+.extern memcpy
 .section .text
 
 
@@ -21,8 +28,6 @@
 #	rdx		The column to print to
 # Return value
 #	rax		New cursor position
-# Clobbers
-#	rax, cx, edx, rdi, rsi, r8
 .globl printAt
 .type printAt, @function
 
@@ -41,8 +46,6 @@ printAt:
 #	rsi		The address in video memory to print the string to
 # Return value
 #	rax		New cursor position
-# Clobbers
-#	rax, cx, dx, rdi, rsi
 .globl printTargeted
 .type printTargeted, @function
 
@@ -57,8 +60,6 @@ printTargeted:
 #	rdi		The address of the string to print
 # Return value
 #	rax		New cursor position
-# Clobbers
-#	rax, cx, dx, rdi, rsi
 .globl print
 .type print, @function
 
@@ -78,6 +79,9 @@ printRecurse:
 	movw %cx, (%rax)
 	addq $2, %rax
 printResume:
+	cmpq $VIDEO_END, %rax
+	jge stringScroll
+backFromScroll:
 	incq %rdi
 	movb (%rdi), %cl
 	cmpb $0, %cl
@@ -87,6 +91,17 @@ printEnd:
 	shrq $1, %rax
 	movq %rax, %rdi
 	jmp setCursorPosition
+
+stringScroll:
+	# need to preserve rdi, rax
+	pushq %rdi
+	pushq %rax
+	call scroll
+	popq %rax
+	popq %rdi
+	movb $WHITE_ON_BLACK, %ch
+	subq $ROW_WIDTH, %rax
+	jmp backFromScroll
 
 newLine:
 	subl $VIDEO_ADDRESS, %eax	# Get offset from start of video memory
@@ -98,6 +113,25 @@ newLine:
 	addw %dx, %si				# Set register s to start of next line
 	leaq VIDEO_ADDRESS(%rsi), %rax	# Load address into register a
 	jmp printResume
+
+
+
+# Scroll the screen one line
+# Return value
+#	rax		Character and color code for empty screen
+.globl scroll
+.type scroll, @function
+
+scroll:
+	movq $SECOND_ROW, %rdi
+	movq $VIDEO_MEMORY_SIZE, %rdx
+	movq $VIDEO_ADDRESS, %rsi
+	call memcpy
+	movl $LAST_ROW, %edi
+	movq $BLACK_SCREEN, %rax
+	movq $NUM_COLS_DIV_FOUR, %rcx
+	rep stosq
+	ret
 
 
 	
@@ -157,8 +191,6 @@ printCharColorAt:
 #	di		The character and color to be printed
 # Return value
 #	al		The least significant byte of the cursor position
-# Clobbers
-#	rax, rcx, dx, rdi
 .globl printCharColor
 .type printCharColor, @function
 
@@ -169,6 +201,14 @@ printCharColor:
 	leaq VIDEO_ADDRESS(,%rax,2), %rcx
 	movw %di, (%rcx)
 	leaq 1(%rax), %rdi
+	cmpq $CURSOR_END, %rdi
+	jl setCursorPosition
+
+charScroll:
+	pushq %rdi
+	call scroll
+	popq %rdi
+	subq $MAX_COLS, %rdi
 	jmp setCursorPosition
 
 
@@ -176,8 +216,6 @@ printCharColor:
 # Advance the cursor to the next line
 # Return value
 #	al		Least significant byte of new cursor position
-# Clobbers
-#	rax, cx, dx, di
 .globl printNewLine
 .type printNewLine, @function
 
@@ -189,6 +227,8 @@ printNewLine:
 	shrw $8, %ax
 	subw %ax, %di
 	addw %cx, %di
+	cmpq $CURSOR_END, %rdi
+	jge charScroll
 	jmp setCursorPosition
 
 
@@ -204,7 +244,7 @@ printNewLine:
 clearScreen:
 	movl $VIDEO_ADDRESS, %edi
 	movq $BLACK_SCREEN, %rax
-	movq $500, %rcx
+	movq $SCREEN_SIZE_DIV_FOUR, %rcx
 	rep stosq
 	movq $0, %rdi
 	jmp setCursorPosition
@@ -270,8 +310,6 @@ setCursorRowCol:
 #	dil		The character to be printed
 # Return value
 #	al		The least significant byte of cursor position
-# Clobbers
-#	rax, rcx, dx, rdi
 .globl printChar
 .type printChar, @function
 
@@ -284,6 +322,8 @@ printChar:
 	leaq VIDEO_ADDRESS(,%rax,2), %rcx
 	movw %dx, (%rcx)
 	leaq 1(%rax), %rdi
+	cmpq $CURSOR_END, %rdi
+	jge charScroll
 #	jmp setCursorPosition
 
 

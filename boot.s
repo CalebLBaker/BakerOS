@@ -7,6 +7,7 @@
 [org 0x7c00]
 [bits 16]
 KERNEL_OFFSET equ 0x500
+KERNEL_SIZE equ 4
 
 	; Set up stack
 	mov bp, 0x9000
@@ -19,7 +20,7 @@ KERNEL_OFFSET equ 0x500
 
 	; ah indicates the function for the interupt (2 for read)
 	; al is the number of sectors to read (2)
-	mov ax, 0x0202
+	mov ax, 0x0200 + KERNEL_SIZE
 
 	; ch is the cylinder number (0)
 	; cl is the sector number (0x02 is the first available sector)
@@ -34,7 +35,7 @@ KERNEL_OFFSET equ 0x500
 	jc disk_error
 
 	; Make sure the correct number of sectors were read
-	cmp al, 2
+	cmp al, KERNEL_SIZE
 	jne sectors_error
 
 

@@ -7,14 +7,17 @@
 buttaire.bin: boot.bin kernel.bin
 	cat $^ > $@
 
-kernel.bin: kernelEntry.o kernel.o screen.o
+kernel.bin: kernelEntry.o kernel.o screen.o utils.o
 	ld -o $@ -Ttext 0x500 $^ --oformat binary
 
-kernel.elf: kernelEntry.o kernel.o screen.o
+kernel.elf: kernelEntry.o kernel.o screen.o utils.o
 	ld -o $@ -Ttext 0x500 $^
 
 kernelEntry.o: kernelEntry.S
-	nasm $< -f elf64 -o $@
+	gcc -g -ffreestanding -c $^ -o $@
+
+utils.o: utils.c
+	gcc -g -ffreestanding -c $^ -o $@
 
 screen.o: screen.S
 	gcc -g -ffreestanding -c $^ -o $@
