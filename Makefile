@@ -16,7 +16,7 @@ kernel.elf: kernelEntry.o kernel.o screen.o
 kernelEntry.o: kernelEntry.S
 	nasm $< -f elf64 -o $@
 
-kernelPrint.o: screen.S
+screen.o: screen.S
 	gcc -g -ffreestanding -c $^ -o $@
 
 kernel.o: kernel.c

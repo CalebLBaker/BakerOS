@@ -21,13 +21,16 @@
 #	rdx		The column to print to
 # Return value
 #	rax		New cursor position
+# Clobbers
+#	rax, cx, edx, rdi, rsi, r8
 .globl printAt
 .type printAt, @function
 
 printAt:
-	movq $MAX_COLS, %rax
+	movq $ROW_WIDTH, %rax
+	movq %rdx, %r8
 	mulq %rsi
-	leaq VIDEO_ADDRESS(%rdx,%rax,), %rax
+	leaq VIDEO_ADDRESS(%rax,%r8,2), %rax
 	jmp printEnter
 	
 
@@ -38,6 +41,8 @@ printAt:
 #	rsi		The address in video memory to print the string to
 # Return value
 #	rax		New cursor position
+# Clobbers
+#	rax, cx, dx, rdi, rsi
 .globl printTargeted
 .type printTargeted, @function
 
@@ -52,6 +57,8 @@ printTargeted:
 #	rdi		The address of the string to print
 # Return value
 #	rax		New cursor position
+# Clobbers
+#	rax, cx, dx, rdi, rsi
 .globl print
 .type print, @function
 
@@ -101,6 +108,8 @@ newLine:
 #	rdx		The column to print to
 # Return value
 #	rax		Video memory address character was printed to
+# Clobbers
+#	rax, cx, edx, dil, rsi, r8
 .globl printCharAt
 .type printCharAt, @function
 
@@ -109,9 +118,10 @@ printCharAt:
 	je return
 	movb $WHITE_ON_BLACK, %ch
 	movb %dil, %cl
-	movq $MAX_COLS, %rax
+	movq $ROW_WIDTH, %rax
+	movq %rdx, %r8
 	mulq %rsi
-	leaq VIDEO_ADDRESS(%rdx,%rax,), %rax
+	leaq VIDEO_ADDRESS(%rax,%r8,2), %rax
 	movw %cx, (%rax)
 return:
 	ret
@@ -125,15 +135,18 @@ return:
 #	rdx		The column to print to
 # Return value
 #	rax		Video memory address character was printed to
-.globl printAt
-.type printAt, @function
+# Clobbers
+#	rax, edx, dil, rsi, r8
+.globl printCharColorAt
+.type printCharColorAt, @function
 
 printCharColorAt:
 	cmpb NEW_LINE, %dil
 	je return
-	movq $MAX_COLS, %rax
+	movq $ROW_WIDTH, %rax
+	movq %rdx, %r8
 	mulq %rsi
-	leaq VIDEO_ADDRESS(%rdx,%rax,), %rax
+	leaq VIDEO_ADDRESS(%rax,%r8,2), %rax
 	movw %di, (%rax)
 	ret
 
@@ -144,6 +157,8 @@ printCharColorAt:
 #	di		The character and color to be printed
 # Return value
 #	al		The least significant byte of the cursor position
+# Clobbers
+#	rax, rcx, dx, rdi
 .globl printCharColor
 .type printCharColor, @function
 
@@ -161,6 +176,8 @@ printCharColor:
 # Advance the cursor to the next line
 # Return value
 #	al		Least significant byte of new cursor position
+# Clobbers
+#	rax, cx, dx, di
 .globl printNewLine
 .type printNewLine, @function
 
@@ -179,6 +196,8 @@ printNewLine:
 # Clear the screen
 # Return value
 #	rax		Character / color code for empty screen
+# Clobbers
+#	rax, rcx, dx, edi, rdi
 .globl clearScreen
 .type clearScreen, @function
 
@@ -195,6 +214,8 @@ clearScreen:
 # Get the position of the cursor
 # Return value
 #	rax		Position of cursor
+# Clobbers
+#	rax, cl, dx
 .globl getCursorPosition
 .type getCursorPosition, @function
 
@@ -230,6 +251,8 @@ getCursorPosition:
 #	rsi		New column for cursor
 # Return value
 #	al		Least significant byte of new cursor position
+# Clobbers
+#	rax, edx, rdi
 .globl setCursorRowCol
 .type setCursorRowCol, @function
 
@@ -247,15 +270,17 @@ setCursorRowCol:
 #	dil		The character to be printed
 # Return value
 #	al		The least significant byte of cursor position
+# Clobbers
+#	rax, rcx, dx, rdi
 .globl printChar
 .type printChar, @function
 
 printChar:
 	cmpb $NEW_LINE, %dil
 	je printNewLine
+	call getCursorPosition
 	movb $WHITE_ON_BLACK, %dh
 	movb %dil, %dl
-	call getCursorPosition
 	leaq VIDEO_ADDRESS(,%rax,2), %rcx
 	movw %dx, (%rcx)
 	leaq 1(%rax), %rdi
@@ -268,6 +293,8 @@ printChar:
 #	rdi		New position for the cursor
 # Return value
 #	al		Least significant byte of new cursor position
+# Clobbers
+#	al, dx
 .globl setCursorPosition
 .type setCursorPosition, @function
 
@@ -298,6 +325,8 @@ setCursorPosition:
 # Return value
 #	al		Row number for the rdi position
 #	ah		Column number for the rdi position
+# Clobbers
+#	ax, cl
 .globl rowFromPosition
 .type rowFromPosition, @function
 
@@ -314,6 +343,8 @@ rowFromPosition:
 #	di		A cursor position
 # Return value
 #	al		Column number for the rdi position
+# Clobbers
+#	ax, cl
 .globl colFromPosition
 .type colFromPosition, @function
 
@@ -330,6 +361,8 @@ colFromPosition:
 # Return value
 #	al		Row number of the cursor
 #	ah		Column number of the cursor
+# Clobbers
+#	ax, cl, dx
 .globl getCursorRowCol
 .type getCursorRowCol, @function
 
@@ -338,3 +371,4 @@ getCursorRowCol:
 	movb $MAX_COLS, %cl
 	divb %cl
 	ret
+
