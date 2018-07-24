@@ -7,7 +7,7 @@
 [org 0x7c00]
 [bits 16]
 KERNEL_OFFSET equ 0x500
-KERNEL_SIZE equ 4
+KERNEL_SIZE equ 7
 
 	; Set up stack
 	mov bp, 0x9000
@@ -74,8 +74,8 @@ sectors_error:
 	jmp $
 
 
-%include "print.s"
-%include "32bitGDT.s"
+%include "boot/print.s"
+%include "boot/32bitGDT.s"
 
 [bits 32]
 init_pm:
@@ -189,7 +189,7 @@ enterLongMode:
 .NoCPUID:
 	jmp $
 
-%include "64bitGDT.s"
+%include "boot/64bitGDT.s"
 
 [bits 64]
 

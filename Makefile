@@ -2,44 +2,55 @@
 # $< = first dependency
 # $^ = all dependencies
 
-# First rule is the one executed when no parameters are fed to the Makefile
+C_SOURCES = $(wildcard kernel/*.c)
 
-buttaire.bin: boot.bin kernel.bin
+# Assembly sources listed manually to exclude kernelEntry.S
+ASM_SOURCES = kernel/screen.S kernel/isr.S
+
+HEADERS =$(wildcard kernel/*.h)
+
+C_OBJ = ${C_SOURCES:.c=.o}
+ASM_OBJ = ${ASM_SOURCES:.S=.o}
+OBJ = ${C_OBJ} ${ASM_OBJ}
+
+CC = gcc
+CFLAGS = -g -fno-stack-protector
+ASMFLAGS = -g
+
+buttaire.bin: boot/boot.bin kernel/kernel.bin
 	cat $^ > $@
 
-kernel.bin: kernelEntry.o kernel.o screen.o utils.o
+
+# kernelEntry.o listed separately to guarantee that it is listed first
+
+kernel/kernel.bin: kernel/kernelEntry.o ${OBJ}
 	ld -o $@ -Ttext 0x500 $^ --oformat binary
 
-kernel.elf: kernelEntry.o kernel.o screen.o utils.o
+kernel/kernel.elf: kernel/kernelEntry.o ${OBJ}
 	ld -o $@ -Ttext 0x500 $^
 
-kernelEntry.o: kernelEntry.S
-	gcc -g -ffreestanding -c $^ -o $@
-
-utils.o: utils.c
-	gcc -g -ffreestanding -c $^ -o $@
-
-screen.o: screen.S
-	gcc -g -ffreestanding -c $^ -o $@
-
-kernel.o: kernel.c
-	gcc -g -ffreestanding -c $^ -o $@
 
 # Rule to disassemble the kernel - may be useful to debug
-kernel.dis: kernel.bin
+kernel/kernel.dis: kernel/kernel.bin
 	ndisasm -b 64 $< > $@
 
-boot.bin: boot.s
+boot/boot.bin: boot/boot.s
 	nasm $< -f bin -o $@
+
+%.o: %.c ${HEADERS}
+	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
+
+%.o: %.S ${HEADERS}
+	${CC} ${ASMFLAGS} -ffreestanding -c $< -o $@
 
 all: run
 
 run: buttaire.bin
 	qemu-system-x86_64 -fda $<
 
-debug: buttaire.bin kernel.elf
+debug: buttaire.bin kernel/kernel.elf
 	qemu-system-x86_64 -s -fda buttaire.bin &
-	gdb -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
+	gdb -ex "target remote localhost:1234" -ex "symbol-file kernel/kernel.elf"
 
 clean:
-	rm *.bin *.o *.dis *.elf
+	rm -f boot/*.bin *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf

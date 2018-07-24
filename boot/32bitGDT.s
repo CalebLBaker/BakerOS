@@ -19,7 +19,7 @@ gdt_data:
 	db 0x0
 	db 10010010b
 	db 11001111b
-db 0x0
+	db 0x0
 
 gdt_end:
 
