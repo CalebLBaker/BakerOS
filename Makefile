@@ -13,13 +13,24 @@ C_OBJ = ${C_SOURCES:.c=.o}
 ASM_OBJ = ${ASM_SOURCES:.S=.o}
 OBJ = ${C_OBJ} ${ASM_OBJ}
 
-CC = gcc
+CC = clang
 CFLAGS = -g -fno-stack-protector
 ASMFLAGS = -g
 
+attach: buttaire.vdi
+	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $<
+
+buttaire.vdi: buttaire.bin
+	VBoxManage convertfromraw $< $@ --format VDI
+
+vm: buttaire.vdi
+	VBoxManage createvm --name Buttaire --ostype Other_64 --register
+	VBoxManage storagectl Buttaire --name SATA --add sata --controller IntelAHCI
+	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $<
+
 buttaire.bin: boot/boot.bin kernel/kernel.bin
 	cat $^ > $@
-
+	truncate -s 3M $@
 
 # kernelEntry.o listed separately to guarantee that it is listed first
 
@@ -45,8 +56,8 @@ boot/boot.bin: boot/boot.s
 
 all: run
 
-run: buttaire.bin
-	qemu-system-x86_64 -fda $<
+run: attach
+	VBoxManage startvm Buttaire
 
 debug: buttaire.bin kernel/kernel.elf
 	qemu-system-x86_64 -s -fda buttaire.bin &
@@ -54,3 +65,5 @@ debug: buttaire.bin kernel/kernel.elf
 
 clean:
 	rm -f boot/*.bin *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf
+	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium emptydrive
+	VBoxManage closemedium disk buttaire.vdi --delete
