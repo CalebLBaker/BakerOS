@@ -14,6 +14,7 @@ ASM_OBJ = ${ASM_SOURCES:.S=.o}
 OBJ = ${C_OBJ} ${ASM_OBJ}
 
 CC = clang
+AS = as
 CFLAGS = -g -fno-stack-protector
 ASMFLAGS = -g
 
@@ -40,13 +41,18 @@ kernel/kernel.bin: kernel/kernelEntry.o ${OBJ}
 kernel/kernel.elf: kernel/kernelEntry.o ${OBJ}
 	ld -o $@ -Ttext 0x500 $^
 
-
 # Rule to disassemble the kernel - may be useful to debug
 kernel/kernel.dis: kernel/kernel.bin
 	ndisasm -b 64 $< > $@
 
-boot/boot.bin: boot/boot.s
-	nasm $< -f bin -o $@
+boot/boot.bin: boot/boot.o
+	ld -Ttext 0x7c00 --oformat binary -o $@ $<
+
+boot/boot.o: boot/boot.s
+	${AS} -o $@ $<
+
+boot/boot.s: boot/boot.S
+	cpp $< > $@
 
 %.o: %.c ${HEADERS}
 	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
@@ -64,6 +70,6 @@ debug: buttaire.bin kernel/kernel.elf
 	gdb -ex "target remote localhost:1234" -ex "symbol-file kernel/kernel.elf"
 
 clean:
-	rm -f boot/*.bin *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf
+	rm -f boot/*.s boot/*.bin boot/*.o *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf
 	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium emptydrive
 	VBoxManage closemedium disk buttaire.vdi --delete
