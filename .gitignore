@@ -1,4 +1,6 @@
+*.s
 *.bin
 *.o
 *.dis
 *.elf
+*.vdi
