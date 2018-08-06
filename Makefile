@@ -18,16 +18,15 @@ AS = as
 CFLAGS = -g -fno-stack-protector
 ASMFLAGS = -g
 
-attach: buttaire.vdi
-	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $<
-
-buttaire.vdi: buttaire.bin
+buttaire.vdi: buttaire.bin .deleteDisk.sh
+	chmod +x .deleteDisk.sh
+	./.deleteDisk.sh
 	VBoxManage convertfromraw $< $@ --format VDI
+	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $@
 
-vm: buttaire.vdi
+vm:
 	VBoxManage createvm --name Buttaire --ostype Other_64 --register
 	VBoxManage storagectl Buttaire --name SATA --add sata --controller IntelAHCI
-	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $<
 
 buttaire.bin: boot/boot.bin kernel/kernel.bin
 	cat $^ > $@
@@ -49,7 +48,7 @@ boot/boot.bin: boot/boot.o
 	ld -Ttext 0x7c00 --oformat binary -o $@ $<
 
 boot/boot.o: boot/boot.s
-	${AS} -o $@ $<
+	${AS} -g -o $@ $<
 
 boot/boot.s: boot/boot.S
 	cpp $< > $@
@@ -62,7 +61,7 @@ boot/boot.s: boot/boot.S
 
 all: run
 
-run: attach
+run: buttaire.vdi
 	VBoxManage startvm Buttaire
 
 debug: buttaire.bin kernel/kernel.elf
@@ -71,5 +70,5 @@ debug: buttaire.bin kernel/kernel.elf
 
 clean:
 	rm -f boot/*.s boot/*.bin boot/*.o *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf
-	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium emptydrive
-	VBoxManage closemedium disk buttaire.vdi --delete
+	chmod +x .deleteDisk.sh
+	./.deleteDisk.sh

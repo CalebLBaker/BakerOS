@@ -29,7 +29,7 @@ GDT64:
 	.byte 0					# Base (high)
 
 .Pointer:				# GDT pointer
-	.word 0x18		# Limit
+	.word 0x17			# Limit
 	.quad GDT64				# Base
 
 

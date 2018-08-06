@@ -28,7 +28,7 @@ gdt_data:
 gdt_end:
 
 gdt_descriptor:
-	.word 0x18	# size
+	.word 0x17	# size
 	.long gdt_start					# address
 
 #define CODE_SEG 8

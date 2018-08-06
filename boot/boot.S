@@ -17,30 +17,41 @@ _start:
 	movw $0x9000, %bp
 	movw %bp, %sp
 
+
+	# Reset drive
+#	xorb %ah, %ah
+#	int $0x13
+
+	movb $0x42, %ah
+	movw $disk_address_packet, %si
+	int $0x13
+	jc disk_error
+
+
 	# Load kernel
-	movw $KERNEL_OFFSET, %bx
+#	movw $KERNEL_OFFSET, %bx
 
 # load dh sectors from drive dl into es:bx
 
 	# ah indicates the function for the interupt (2 for read)
 	# al is the number of sectors to read
-	movw $AX_VAL, %ax
+#	movw $AX_VAL, %ax
 
 	# ch is the cylinder number (0)
 	# cl is the sector number (0x02 is the first available sector)
-	movw $0x0002, %cx
+#	movw $0x0002, %cx
 
 	# dh is the head number (0)
 	# dl is the drive number (0x80 for hard drive)
-	xorb %dh, %dh
+#	xorb %dh, %dh
 
 	# BIOS interrupt
-	int $0x13
-	jc disk_error
+#	int $0x13
+#	jc disk_error
 
 	# Make sure the correct number of sectors were read
-	cmpb $KERNEL_SIZE, %al
-	jne sectors_error
+#	cmpb $KERNEL_SIZE, %al
+#	jne sectors_error
 
 
 # Switch to protected mode
@@ -55,6 +66,16 @@ switch_to_pm:
 	movl %eax, %cr0
 	jmpl $0x8,$init_pm
 
+
+.align 4
+disk_address_packet:
+	.byte 0x10
+	.byte 0
+	.word KERNEL_SIZE
+	.word KERNEL_OFFSET
+	.word 0
+	.long 1
+	.long 0
 
 # Print an error message if a disk read error occured
 disk_error:
