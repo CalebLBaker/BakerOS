@@ -11,6 +11,8 @@
 
 .section .text
 
+#ifdef ISR
+
 # Initialize and load the Interrupt descriptor table
 # Parameters
 #	rdi		Address of idt
@@ -495,3 +497,4 @@ isr31:
 	pushq $31
 	jmp isr_common_stub
 
+#endif

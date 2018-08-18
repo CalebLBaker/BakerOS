@@ -4,3 +4,9 @@
 *.dis
 *.elf
 *.vdi
+*.log
+*.iso
+cross-compiler/binutils-2.31.1
+cross-compiler/gcc-8.2.0
+cross-compiler/build-*
+.tools

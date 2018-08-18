@@ -1,74 +1,66 @@
-# $@ = target file
-# $< = first dependency
-# $^ = all dependencies
+PREFIX:=${HOME}/opt/cross
+TARGET:=x86_64-elf
+PATH:="${PREFIX}/bin:${PATH}"
+CROSS_COMP_FLAGS:=--target=${TARGET} --prefix="${PREFIX}" --disable-nls
+CC:=${PREFIX}/bin/${TARGET}-gcc
+AS:=${PREFIX}/bin/${TARGET}-as
 
-C_SOURCES = $(wildcard kernel/*.c)
-
-# Assembly sources listed manually to exclude kernelEntry.S
-ASM_SOURCES = kernel/screen.S kernel/isr.S
-
-HEADERS =$(wildcard kernel/*.h)
+C_SOURCES = $(wildcard src/*.c)
+ASM_SOURCES = $(wildcard src/*.S)
+HEADERS = $(wildcard src/*.h)
 
 C_OBJ = ${C_SOURCES:.c=.o}
-ASM_OBJ = ${ASM_SOURCES:.S=.o}
+PREPROCESSED = ${ASM_SOURCES:.S=.s}
+ASM_OBJ = ${PREPROCESSED:.s=.o}
 OBJ = ${C_OBJ} ${ASM_OBJ}
+C_FLAGS = -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -c
 
-CC = clang
-AS = as
-CFLAGS = -g -fno-stack-protector
-ASMFLAGS = -g
+all: buttaire.iso
 
-buttaire.vdi: buttaire.bin .deleteDisk.sh
-	chmod +x .deleteDisk.sh
-	./.deleteDisk.sh
-	VBoxManage convertfromraw $< $@ --format VDI
-	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $@
+cross-compiler/binutils-2.31.tar.gz:
+	cd cross-compiler
+	wget https://ftp.gnu.org/gnu/binutils/binutils-2.31.tar.gz
 
-vm:
-	VBoxManage createvm --name Buttaire --ostype Other_64 --register
-	VBoxManage storagectl Buttaire --name SATA --add sata --controller IntelAHCI
+cross-compiler/binutils-2.31: cross-compiler/binutils-2.31.tar.gz
+	tar xf $<
 
-buttaire.bin: boot/boot.bin kernel/kernel.bin
-	cat $^ > $@
-	truncate -s 3M $@
+cross-compiler/build-binutils: cross-compiler/binutils-2.31
+	mkdir $@
+	cd $@
+	../$</configure ${CROSS_COMP_FLAGS} --with-sysroot --disable-werror
+	make 
+	make install
 
-# kernelEntry.o listed separately to guarantee that it is listed first
+cross-compiler/gcc-8.2.0: cross-compiler/gcc-8.2.0.tar.gz
+	tar xf $<
 
-kernel/kernel.bin: kernel/kernelEntry.o ${OBJ}
-	ld -o $@ -Ttext 0x500 $^ --oformat binary
+cross-compiler/build-gcc: cross-compiler/gcc-8.2.0 build-binutils
+	mkdir $@
+	cd $@
+	../$</configure ${CROSS_COMP_FLAGS} --enable-languages=c,c++ --without-headers
+	make all-gcc
+	make all-target-libgcc
+	make install-gcc
+	make install-target-libgcc
 
-kernel/kernel.elf: kernel/kernelEntry.o ${OBJ}
-	ld -o $@ -Ttext 0x500 $^
-
-# Rule to disassemble the kernel - may be useful to debug
-kernel/kernel.dis: kernel/kernel.bin
-	ndisasm -b 64 $< > $@
-
-boot/boot.bin: boot/boot.o
-	ld -Ttext 0x7c00 --oformat binary -o $@ $<
-
-boot/boot.o: boot/boot.s
-	${AS} -g -o $@ $<
-
-boot/boot.s: boot/boot.S
+%.s: %.S ${HEADERS}
 	cpp $< > $@
 
 %.o: %.c ${HEADERS}
-	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
+	${CC} ${C_FLAGS} $< -o $@
 
-%.o: %.S ${HEADERS}
-	${CC} ${ASMFLAGS} -ffreestanding -c $< -o $@
+%.o: %.s
+	${AS} $< -o $@
 
-all: run
+iso/boot/buttaire.elf: link.ld ${OBJ}
+	${CC} -ffreestanding -T $^ -nostdlib -lgcc -o $@ -z max-page-size=0x1000
 
-run: buttaire.vdi
-	VBoxManage startvm Buttaire
-
-debug: buttaire.bin kernel/kernel.elf
-	qemu-system-x86_64 -s -fda buttaire.bin &
-	gdb -ex "target remote localhost:1234" -ex "symbol-file kernel/kernel.elf"
+buttaire.iso: iso/boot/buttaire.elf iso/boot/grub/grub.cfg
+	grub-mkrescue -o $@ iso
 
 clean:
-	rm -f boot/*.s boot/*.bin boot/*.o *.bin kernel/*.bin kernel/*.o kernel/*.dis kernel/*.elf
-	chmod +x .deleteDisk.sh
-	./.deleteDisk.sh
+	rm -f *.iso src/*.s src/*.o iso/boot/*.elf
+	rm -rf cross-compiler/binutils-2.31.1
+	rm -rf cross-compiler/gcc-8.2.0
+	rm -rf cross-compiler/build-*
+
