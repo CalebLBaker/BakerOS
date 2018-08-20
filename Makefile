@@ -6,14 +6,13 @@ CC:=${PREFIX}/bin/${TARGET}-gcc
 AS:=${PREFIX}/bin/${TARGET}-as
 
 C_SOURCES = $(wildcard src/*.c)
-ASM_SOURCES = $(wildcard src/*.S)
+ASM_SOURCES = $(wildcard src/*.s)
 HEADERS = $(wildcard src/*.h)
 
 C_OBJ = ${C_SOURCES:.c=.o}
-PREPROCESSED = ${ASM_SOURCES:.S=.s}
-ASM_OBJ = ${PREPROCESSED:.s=.o}
+ASM_OBJ = ${ASM_SOURCES:.s=.o}
 OBJ = ${C_OBJ} ${ASM_OBJ}
-C_FLAGS = -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -c
+CFLAGS = -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -c
 
 all: buttaire.iso
 
@@ -31,8 +30,14 @@ cross-compiler/build-binutils: cross-compiler/binutils-2.31
 	make 
 	make install
 
-cross-compiler/gcc-8.2.0: cross-compiler/gcc-8.2.0.tar.gz
+cross-compiler/gcc-8.2.0.tar.gz:
+	cd cross-compiler
+	wget https://ftp.gnu.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
+
+cross-compiler/gcc-8.2.0: cross-compiler/gcc-8.2.0.tar.gz cross-compiler/t-x86_64-elf cross-compiler/config.gcc
 	tar xf $<
+	cp cross-compiler/t-x86_64-elf $@/gcc/config/i386/
+	cp cross-compiler/config.gcc $@/gcc/
 
 cross-compiler/build-gcc: cross-compiler/gcc-8.2.0 build-binutils
 	mkdir $@
@@ -42,24 +47,22 @@ cross-compiler/build-gcc: cross-compiler/gcc-8.2.0 build-binutils
 	make all-target-libgcc
 	make install-gcc
 	make install-target-libgcc
-
-%.s: %.S ${HEADERS}
-	cpp $< > $@
+	touch .tools
 
 %.o: %.c ${HEADERS}
-	${CC} ${C_FLAGS} $< -o $@
+	${CC} ${CFLAGS} $< -o $@
 
 %.o: %.s
 	${AS} $< -o $@
 
-iso/boot/buttaire.elf: link.ld ${OBJ}
+root/boot/buttaire.elf: link.ld ${OBJ}
 	${CC} -ffreestanding -T $^ -nostdlib -lgcc -o $@ -z max-page-size=0x1000
 
-buttaire.iso: iso/boot/buttaire.elf iso/boot/grub/grub.cfg
-	grub-mkrescue -o $@ iso
+buttaire.iso: root/boot/buttaire.elf root/boot/grub/grub.cfg
+	grub-mkrescue -o $@ root
 
 clean:
-	rm -f *.iso src/*.s src/*.o iso/boot/*.elf
+	rm -f *.iso src/*.o root/boot/*.elf cross-compiler/*.tar.gz
 	rm -rf cross-compiler/binutils-2.31.1
 	rm -rf cross-compiler/gcc-8.2.0
 	rm -rf cross-compiler/build-*

@@ -1,8 +1,8 @@
-#define KERNEL_DS 0x10
-#define ERROR_CODE 0x52
-#define INTERRUPT_NUMBER 0x4a
-#define IDT_GATE_SIZE 0x10
-#define IDT_SIZE 0xfff
+.set KERNEL_DS, 0x10
+.set ERROR_CODE, 0x52
+.set INTERRUPT_NUMBER, 0x4A
+.set IDT_GATE_SIZE, 0x10
+.set IDT_SIZE, 0xFFFF
 
 
 .extern isr_handler
