@@ -1,11 +1,11 @@
 #include "idt.h"
-#include "screen.h"
+#include "vga.h"
 
 #define KERNEL_CS 0x08
 #define INTERRUPT_GATE 0x8e
 
 
-void set_idt_gate(idt_gate *entry, uint64 handler) {
+void set_idt_gate(idt_gate *entry, uint64_t handler) {
 	entry->low_offset = handler & 0xffff;
 	entry->selector = KERNEL_CS;
 	entry->ist = 0;
@@ -16,7 +16,7 @@ void set_idt_gate(idt_gate *entry, uint64 handler) {
 }
 
 
-void isr_handler(uint64 intNum, uint64 errorCode) {
+void isr_handler(uint64_t intNum, uint64_t errorCode) {
 	const char *exception_messages[32] = {
 		"Division By Zero",
 		"Debug",

@@ -5,7 +5,8 @@
 .set SCREEN_CTRL, 0x3D4
 .set SCREEN_DATA, 0x3D5
 .set WHITE_ON_BLACK, 0xF
-.set BLACK_SCREEN, 0x0f200f200f200f20
+.set BLACK_SPACE, 0x0F20
+.set BLANK, 0x0F20
 .set MAX_ROWS, 25
 .set MAX_COLS, 80
 .set ROW_WIDTH, 160
@@ -17,8 +18,39 @@
 .set LAST_ROW, 0xB8F00
 .set NUM_COLS_DIV_FOUR, 20
 
-.extern memcpy
+.extern memmove
+
+
 .section .text
+
+color:
+	.byte WHITE_ON_BLACK
+blank:
+	.word BLACK_SPACE
+blank_one:
+	.word BLACK_SPACE
+blank_two:
+	.word BLACK_SPACE
+blank_three:
+	.word BLACK_SPACE
+
+
+# Set the default color
+# Parameters
+#	di		The color to set the default to
+.globl setColor
+.type setColor, @function
+
+setColor:
+	movw %di, %ax
+	movb %al, color
+	movb %al, blank
+	movb %al, blank_one
+	movb %al, blank_two
+	movb %al, blank_three
+	ret
+	
+
 
 
 # Print a string at a given row and column
@@ -68,7 +100,7 @@ print:
 	leaq VIDEO_ADDRESS(,%rax,2), %rax
 
 printEnter:
-	movb $WHITE_ON_BLACK, %ch
+	movb color, %ch
 	movb (%rdi), %cl
 	cmpb $0, %cl
 	je printEnd
@@ -99,7 +131,7 @@ stringScroll:
 	call scroll
 	popq %rax
 	popq %rdi
-	movb $WHITE_ON_BLACK, %ch
+	movb color, %ch
 	subq $ROW_WIDTH, %rax
 	jmp backFromScroll
 
@@ -123,12 +155,12 @@ newLine:
 .type scroll, @function
 
 scroll:
-	movq $SECOND_ROW, %rdi
+	movq $SECOND_ROW, %rsi
 	movq $VIDEO_MEMORY_SIZE, %rdx
-	movq $VIDEO_ADDRESS, %rsi
-	call memcpy
+	movq $VIDEO_ADDRESS, %rdi
+	call memmove
 	movl $LAST_ROW, %edi
-	movq $BLACK_SCREEN, %rax
+	movq blank, %rax
 	movq $NUM_COLS_DIV_FOUR, %rcx
 	rep stosq
 	ret
@@ -150,7 +182,7 @@ scroll:
 printCharAt:
 	cmpb NEW_LINE, %dil
 	je return
-	movb $WHITE_ON_BLACK, %ch
+	movb color, %ch
 	movb %dil, %cl
 	movq $ROW_WIDTH, %rax
 	movq %rdx, %r8
@@ -243,7 +275,7 @@ printNewLine:
 
 clearScreen:
 	movl $VIDEO_ADDRESS, %edi
-	movq $BLACK_SCREEN, %rax
+	movq blank, %rax
 	movq $SCREEN_SIZE_DIV_FOUR, %rcx
 	rep stosq
 	movq $0, %rdi
@@ -317,7 +349,7 @@ printChar:
 	cmpb $NEW_LINE, %dil
 	je printNewLine
 	call getCursorPosition
-	movb $WHITE_ON_BLACK, %dh
+	movb color, %dh
 	movb %dil, %dl
 	leaq VIDEO_ADDRESS(,%rax,2), %rcx
 	movw %dx, (%rcx)

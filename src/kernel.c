@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "isr.h"
-#include "screen.h"
+#include "vga.h"
 
 void main() {
 	idt_gate idt[IDT_ENTRIES];

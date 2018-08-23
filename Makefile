@@ -12,9 +12,32 @@ HEADERS = $(wildcard src/*.h)
 C_OBJ = ${C_SOURCES:.c=.o}
 ASM_OBJ = ${ASM_SOURCES:.s=.o}
 OBJ = ${C_OBJ} ${ASM_OBJ}
-CFLAGS = -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -c
+CFLAGS = -g -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -c
+ASMFLAGS = -g
 
-all: buttaire.iso
+all: .attach
+
+run: .attach
+	VBoxManage startvm Buttaire
+
+debug: buttaire.iso
+	qemu-system-x86_64 -s -S -cdrom $< &
+	sleep 1
+	gdb -ex "target remote localhost:1234" -ex "symbol-file root/boot/buttaire.elf"
+
+.attach: buttaire.vdi .vm
+	VBoxManage storageattach Buttaire --storagectl SATA --port 0 --device 0 --type hdd --medium $<
+	touch $@
+
+buttaire.vdi: buttaire.iso .deleteDisk.sh .vm
+	chmod +x .deleteDisk.sh
+	./.deleteDisk.sh
+	VBoxManage convertfromraw $< $@ --format VDI
+
+.vm:
+	VBoxManage createvm --name Buttaire --ostype Other_64 --register
+	VBoxManage storagectl Buttaire --name SATA --add sata --controller IntelAHCI
+	touch $@
 
 cross-compiler/binutils-2.31.tar.gz:
 	cd cross-compiler
@@ -53,7 +76,7 @@ cross-compiler/build-gcc: cross-compiler/gcc-8.2.0 build-binutils
 	${CC} ${CFLAGS} $< -o $@
 
 %.o: %.s
-	${AS} $< -o $@
+	${AS} ${ASMFLAGS} $< -o $@
 
 root/boot/buttaire.elf: link.ld ${OBJ}
 	${CC} -ffreestanding -T $^ -nostdlib -lgcc -o $@ -z max-page-size=0x1000
@@ -62,6 +85,7 @@ buttaire.iso: root/boot/buttaire.elf root/boot/grub/grub.cfg
 	grub-mkrescue -o $@ root
 
 clean:
+	./.deleteDisk.sh
 	rm -f *.iso src/*.o root/boot/*.elf cross-compiler/*.tar.gz
 	rm -rf cross-compiler/binutils-2.31.1
 	rm -rf cross-compiler/gcc-8.2.0
