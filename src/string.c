@@ -2,6 +2,13 @@
 #include "string.h"
 
 
+size_t strlen(const char * str) {
+	size_t len = 0;
+	for (; str[len]; len++) {}
+	return len;
+}
+
+
 void memcpy(void *dest, void *src, size_t size) {
 	uint64_t *bigSrc = (uint64_t*)src;
 	uint64_t *bigDest = (uint64_t*)dest;
