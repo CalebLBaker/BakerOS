@@ -4,6 +4,42 @@
 #include "vga.h"
 #include "stdio.h"
 
+
+int printInt(uint64_t val, uint8_t base, int8_t index, bool sign) {
+	int written = 0;
+	if (sign && (int64_t)val < 0) {
+		printChar('-');
+		val = (uint64_t)(-(int64_t)val);
+		written++;
+	}
+	uint64_t order = 1;
+	for (uint8_t i = 0; i < index; i++) {
+		order *= base;
+	}
+	for (bool empty = true; order; order /= base) {
+		uint8_t digit = (uint8_t) (val / order);
+		val %= order;
+		index--;
+		if (empty) {
+			if (!digit && index >= 0) {
+				continue;
+			}
+			else {
+				empty = false;
+				written += index + 2;
+			}
+		}
+		if (digit < 0xa) {
+			printChar(digit + '0');
+		}
+		else {
+			printChar(digit + 87);
+		}
+	}
+	return written;
+}
+
+
 int printf(const char* format, ...) {
 	va_list parameters;
 	va_start(parameters, format);
@@ -36,37 +72,27 @@ int printf(const char* format, ...) {
 					break;
 				}
 				case ('x') : {
-					uint32_t hex = va_arg(parameters, int);
-					bool empty = true;
-					int8_t index = 7;
-					for (uint32_t mask = 0xf0000000; mask != 0; mask >>= 4) {
-						uint8_t data = (uint8_t) ((hex & mask) >> (index << 2));
-						index--;
-						if (empty) {
-							if (!data && index >= 0) {
-								continue;
-							}
-							else {
-								empty = false;
-								written += (index + 2);
-							}
-						}
-
-						// Add '0' for 0-9 add 'a'-10 for a-f
-						if (data < 0xa)	{
-							printChar(data + '0');
-						}
-						else {
-							printChar(data + 87);
-						}
-					}
+					unsigned val = va_arg(parameters, unsigned);
+					written += printInt((uint64_t)val, 0x10, 7, false);
+					format++;
+					break;
+				}
+				case ('i') : {
+					int val = va_arg(parameters, int);
+					written += printInt((uint64_t)val, 10, 9, true);
+					format++;
+					break;
+				}
+				case ('u') : {
+					unsigned val = va_arg(parameters, unsigned);
+					written += printInt((uint64_t)val, 10, 9, false);
 					format++;
 					break;
 				}
 				default : {
 					va_end(parameters);
 					return -1;
-				}					
+				}
 			}
 		}
 	}
