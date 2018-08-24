@@ -14,8 +14,6 @@ typedef struct {
 	uint32_t zero;		// reserved
 } __attribute__((packed)) idt_gate;
 
-void isr_handler(uint64_t intNum, uint64_t errorCode);
-
 void set_idt_gate(idt_gate *idt, uint64_t handler);
 
 typedef struct {
@@ -23,6 +21,5 @@ typedef struct {
 	uint64_t base;
 } __attribute__((packed)) idt_register;
 
-idt_gate idt[IDT_ENTRIES];
 
 #endif

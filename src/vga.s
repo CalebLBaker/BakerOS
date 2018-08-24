@@ -21,7 +21,7 @@
 .extern memmove
 
 
-.section .text
+.section .data
 
 color:
 	.byte WHITE_ON_BLACK
@@ -35,6 +35,8 @@ blank_three:
 	.word BLACK_SPACE
 
 
+.section .text
+
 # Set the default color
 # Parameters
 #	di		The color to set the default to
@@ -42,12 +44,11 @@ blank_three:
 .type setColor, @function
 
 setColor:
-	movw %di, %ax
-	movb %al, color
-	movb %al, blank
-	movb %al, blank_one
-	movb %al, blank_two
-	movb %al, blank_three
+	movb %dil, color
+	movb %dil, blank
+	movb %dil, blank_one
+	movb %dil, blank_two
+	movb %dil, blank_three
 	ret
 	
 

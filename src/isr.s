@@ -8,10 +8,12 @@
 .extern isr_handler
 .extern set_idt_gate
 
+.section .data
+panic_message:
+	.asciz "Unhandled Exception"
+
 
 .section .text
-
-#ifdef ISR
 
 # Initialize and load the Interrupt descriptor table
 # Parameters
@@ -161,340 +163,234 @@ isr_install:
 	ret
 
 
-isr_common_stub:
-
-	# Save CPU state
-	pushq %r10
-	pushq %r11
-	pushq %rdi
-	pushq %rsi
-	pushq %rdx
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %rax
-	movw %ds, %ax
-	pushw %ax
-
-	# Do segment stuff
-	movw $KERNEL_DS, %ax
-	movw %ax, %ds
-	movw %ax, %es
-	movw %ax, %fs
-	movw %ax, %gs
-
-	# Call handler
-	movq INTERRUPT_NUMBER(%rsp), %rdi
-	movq ERROR_CODE(%rsp), %rsi
-	call isr_handler
-
-	# Restore segment registers
-	popw %ax
-	movw %ax, %ds
-	movw %ax, %ds
-	movw %ax, %es
-	movw %ax, %fs
-	movw %ax, %gs
-
-	# Restore clobbered registers
-	popq %rax
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rdx
-	popq %rsi
-	popq %rdi
-	popq %r11
-	popq %r10
-
-	# Remove interrupt number and error code from stack
-	addq $0x10, %rsp
-
-	# Re-enable interrups and return
-	sti
-	iretq
-
+panic:
+	movq $panic_message, %rdi
+	call print
+freeze:
+	hlt
+	jmp freeze
 
 # 0:	Divide By Zero Exception
 .globl isr0
 .type isr0, @function
 isr0:
 	cli
-	pushq $0
-	pushq $0
-	jmp isr_common_stub
+	jmp panic
 
 # 1:	Debug Exception
 .globl isr1
 .type isr1, @function
 isr1:
 	cli
-	pushq $0
-	pushq $1
-	jmp isr_common_stub
+	jmp panic
 
 # 2:	Non Maskable Interrupt Exception
 .globl isr2
 .type isr2, @function
 isr2:
 	cli
-	pushq $0
-	pushq $2
-	jmp isr_common_stub
+	jmp panic
 
 # 3:	Int 3 Exception
 .globl isr3
 .type isr3, @function
 isr3:
 	cli
-	pushq $0
-	pushq $3
-	jmp isr_common_stub
+	jmp panic
 
 # 4:	INTO Exception
 .globl isr4
 .type isr4, @function
 isr4:
 	cli
-	pushq $0
-	pushq $4
-	jmp isr_common_stub
+	jmp panic
 
 # 5:	Out of Bounds Exception
 .globl isr5
 .type isr5, @function
 isr5:
 	cli
-	pushq $0
-	pushq $5
-	jmp isr_common_stub
+	jmp panic
 
 # 6:	Invalid Opcode Exception
 .globl isr6
 .type isr6, @function
 isr6:
 	cli
-	pushq $0
-	pushq $6
-	jmp isr_common_stub
+	jmp panic
 
 # 7:	Coprocessor Not Available Exception
 .globl isr7
 .type isr7, @function
 isr7:
 	cli
-	pushq $0
-	pushq $7
-	jmp isr_common_stub
+	jmp panic
 
 # 8:	Double Fault Exception (With Error Code!)
 .globl isr8
 .type isr8, @function
 isr8:
 	cli
-	pushq $8
-	jmp isr_common_stub
+	jmp panic
 
 # 9:	Coprocessor Segment Overrun Exception
 .globl isr9
 .type isr9, @function
 isr9:
 	cli
-	pushq $0
-	pushq $9
-	jmp isr_common_stub
+	jmp panic
 
 # 10:	Bad TSS Exception (With Error Code!)
 .globl isr10
 .type isr10, @function
 isr10:
 	cli
-	pushq $10
-	jmp isr_common_stub
+	jmp panic
 
 # 11:	Segment Not Present Exception (With Error Code!)
 .globl isr11
 .type isr11, @function
 isr11:
 	cli
-	pushq $11
-	jmp isr_common_stub
+	jmp panic
 
 # 12:	Stack Fault Exception (With Error Code!)
 .globl isr12
 .type isr12, @function
 isr12:
 	cli
-	pushq $12
-	jmp isr_common_stub
+	jmp panic
 
 # 13:	General Protection Fault Exception (with Error Code!)
 .globl isr13
 .type isr13, @function
 isr13:
 	cli
-	pushq $13
-	jmp isr_common_stub
+	jmp panic
 
 # 14:	Page Fault Exception (With Error Code!)
 .globl isr14
 .type isr14, @function
 isr14:
 	cli
-	pushq $14
-	jmp isr_common_stub
+	jmp panic
 
 # 15:	Reserved Exception
 .globl isr15
 .type isr15, @function
 isr15:
 	cli
-	pushq $0
-	pushq $15
-	jmp isr_common_stub
+	jmp panic
 
 # 16:	Floating Point Exception
 .globl isr16
 .type isr16, @function
 isr16:
 	cli
-	pushq $0
-	pushq $16
-	jmp isr_common_stub
+	jmp panic
 
 # 17:	Alignment Check Exception
 .globl isr17
 .type isr17, @function
 isr17:
 	cli
-	pushq $0
-	pushq $17
-	jmp isr_common_stub
+	jmp panic
 
 # 18:	Machine Check Exception
 .globl isr18
 .type isr18, @function
 isr18:
 	cli
-	pushq $0
-	pushq $18
-	jmp isr_common_stub
+	jmp panic
 
 # 19:	Reserved
 .globl isr19
 .type isr19, @function
 isr19:
 	cli
-	pushq $0
-	pushq $19
-	jmp isr_common_stub
+	jmp panic
 
 # 20:	Reserved
 .globl isr20
 .type isr20, @function
 isr20:
 	cli
-	pushq $0
-	pushq $20
-	jmp isr_common_stub
+	jmp panic
 
 # 21:	Reserved
 .globl isr21
 .type isr21, @function
 isr21:
 	cli
-	pushq $0
-	pushq $21
-	jmp isr_common_stub
+	jmp panic
 
 # 22:	Reserved
 .globl isr22
 .type isr22, @function
 isr22:
 	cli
-	pushq $0
-	pushq $22
-	jmp isr_common_stub
+	jmp panic
 
 # 23:	Reserved
 .globl isr23
 .type isr23, @function
 isr23:
 	cli
-	pushq $0
-	pushq $23
-	jmp isr_common_stub
+	jmp panic
 
 # 24:	Reserved
 .globl isr24
 .type isr24, @function
 isr24:
 	cli
-	pushq $0
-	pushq $24
-	jmp isr_common_stub
+	jmp panic
 
 # 25:	Reserved
 .globl isr25
 .type isr25, @function
 isr25:
 	cli
-	pushq $0
-	pushq $25
-	jmp isr_common_stub
+	jmp panic
 
 # 26:	Reserved
 .globl isr26
 .type isr26, @function
 isr26:
 	cli
-	pushq $0
-	pushq $26
-	jmp isr_common_stub
+	jmp panic
 
 # 27:	Reserved
 .globl isr27
 .type isr27, @function
 isr27:
 	cli
-	pushq $0
-	pushq $27
-	jmp isr_common_stub
+	jmp panic
 
 # 28:	Reserved
 .globl isr28
 .type isr28, @function
 isr28:
 	cli
-	pushq $0
-	pushq $28
-	jmp isr_common_stub
+	jmp panic
 
 # 29:	Reserved
 .globl isr29
 .type isr29, @function
 isr29:
 	cli
-	pushq $0
-	pushq $29
-	jmp isr_common_stub
+	jmp panic
 
 # 30:	Reserved
 .globl isr30
 .type isr30, @function
 isr30:
 	cli
-	pushq $0
-	pushq $30
-	jmp isr_common_stub
+	jmp panic
 
 # 31:	Reserved
 .globl isr31
 .type isr31, @function
 isr31:
 	cli
-	pushq $0
-	pushq $31
-	jmp isr_common_stub
+	jmp panic
 
-#endif

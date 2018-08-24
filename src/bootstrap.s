@@ -10,7 +10,7 @@
 .set CPUID_LONG_MODE, 0x20000000
 .set PAGING_BIT, 0x80000000
 .set NO_PAGING_BIT, 0x7FFFFFFF
-.set PAGE_TABLE_START, 0x1000
+.set PAGE_TABLE_START, 0
 .set PAGE_TABLE_SIZE, 0x1000 /* Combined size of all page tables divided by 4 */
 .set PAGE_SIZE, 0x1000 /* Size of a memory page. Also the size of a single page table */
 .set PAE_BIT, 0x20
@@ -19,9 +19,9 @@
 
 /* Address of first table of a type OR'd with 3
    (3 indicates present and readable) */
-.set PDPT, 0x2003	/* Page Directory Pointer Table */
-.set PDT, 0x3003	/* Page Directory Table */
-.set PT, 0x4003		/* Page Table */
+.set PDPT, 0x1003	/* Page Directory Pointer Table */
+.set PDT, 0x2003	/* Page Directory Table */
+.set PT, 0x3003		/* Page Table */
 
 /* These parameter will identity map the first 2 Megabytes */
 .set MEM_START, 3		/* Address (OR'd with 3) of first mapped physical memory */
@@ -131,9 +131,9 @@ _start:
 
 	/* Clear page tables */
 	movl $PAGE_TABLE_START, %edi	/* Set destination */
-	movl %edi, %cr3					/* Set cr3 to page table start */
 	xorl %eax, %eax					/* clear eax */
 	movl $PAGE_TABLE_SIZE, %ecx		/* Set number of iterations */
+	movl %edi, %cr3					/* Set cr3 to page table start */
 	rep stosl						/* Set memory */
 	movl %cr3, %edi					/* Reset destination */
 
