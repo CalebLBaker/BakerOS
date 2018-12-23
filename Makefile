@@ -40,22 +40,19 @@ buttaire.vdi: buttaire.iso .deleteDisk.sh .vm
 	touch $@
 
 cross-compiler/binutils-2.31.tar.gz:
-	cd cross-compiler
 	wget https://ftp.gnu.org/gnu/binutils/binutils-2.31.tar.gz
+	mv binutils-2.31.tar.gz $@
 
 cross-compiler/binutils-2.31: cross-compiler/binutils-2.31.tar.gz
 	tar xf $<
 
 cross-compiler/build-binutils: cross-compiler/binutils-2.31
 	mkdir $@
-	cd $@
-	../$</configure ${CROSS_COMP_FLAGS} --with-sysroot --disable-werror
-	make 
-	make install
+	cd $@ && ../binutils-2.31/configure ${CROSS_COMP_FLAGS} --with-sysroot --disable-werror && make && make install
 
 cross-compiler/gcc-8.2.0.tar.gz:
-	cd cross-compiler
 	wget https://ftp.gnu.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
+	mv gcc-8.2.0.tar.gz $@
 
 cross-compiler/gcc-8.2.0: cross-compiler/gcc-8.2.0.tar.gz cross-compiler/t-x86_64-elf cross-compiler/config.gcc
 	tar xf $<
@@ -64,12 +61,7 @@ cross-compiler/gcc-8.2.0: cross-compiler/gcc-8.2.0.tar.gz cross-compiler/t-x86_6
 
 cross-compiler/build-gcc: cross-compiler/gcc-8.2.0 build-binutils
 	mkdir $@
-	cd $@
-	../$</configure ${CROSS_COMP_FLAGS} --enable-languages=c,c++ --without-headers
-	make all-gcc
-	make all-target-libgcc
-	make install-gcc
-	make install-target-libgcc
+	cd $@ && ../gcc-8.2.0/configure ${CROSS_COMP_FLAGS} --enable-languages=c,c++ --without-headers && make all-gcc && make all-target-libgcc && make install-gcc && make install-target-libgcc
 	touch .tools
 
 %.o: %.c ${HEADERS}
